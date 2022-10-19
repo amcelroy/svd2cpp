@@ -1,0 +1,19 @@
+{
+  "name": "svd2cpp",
+  "version": "1.0.0",
+  "description": "Parse MCU SVD files to a C++",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc"
+  },
+  "author": "Austin McElroy",
+  "license": "ISC",
+  "dependencies": {
+    "fast-xml-parser": "^4.0.11",
+    "typescript": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.0"
+  }
+}
