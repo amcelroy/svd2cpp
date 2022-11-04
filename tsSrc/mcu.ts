@@ -29,11 +29,36 @@ export class MCU {
         let address_width = this.addressing.get(parseInt(json['width']));
         let value_width = this.addressing.get(parseInt(json['width']));
 
-        let peripherals = json['peripherals']['peripheral'] as Array<any>;
-        peripherals.forEach( peripheral => {
-            this.peripherals.push(new Peripheral().parse(peripheral))
+        let json_peripherals = json['peripherals']['peripheral'] as Array<any>;
+        json_peripherals.forEach( json_peripheral => {
+            if(json_peripheral[`@_derivedFrom`]){
+                // Find peripheral with the same name
+                let derived = this.peripherals.filter( (obj: Peripheral) => {
+                    return obj.name === json_peripheral[`@_derivedFrom`];
+                })
+
+                if(derived.length == 0){
+                    throw new Error(`Derived Peripheral not yet parsed`);
+                }
+
+                if(derived.length > 1){
+                    throw new Error(`Too many derived peripherals found`);
+                }
+
+                let derived_peripheral = derived[0] as Peripheral;
+                let copied_peripheral = derived_peripheral.copy(
+                    json_peripheral['name'], 
+                    json_peripheral['baseAddress'],
+                    json_peripheral['interrupt']
+                );
+
+                this.peripherals.push(copied_peripheral);
+            }else{
+                this.peripherals.push(new Peripheral().parse(json_peripheral))
+            }
         });
 
+        let debug_end_of_peripherals = true;
     }
 
     toCPP() {

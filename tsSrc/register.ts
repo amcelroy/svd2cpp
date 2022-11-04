@@ -270,14 +270,13 @@ export class Register {
             let x = json['fields']['field'] as Array<any>;
 
             if(x.length === undefined){
-                this.fields.push(new Field().parse(x));
+                //Don't use Single Field?
+                //this.fields.push(new Field().parse(x));
             }else{
                 x.forEach( field => {
                     this.fields.push(new Field().parse(field));
                 });
             }
-
-
         }
 
         return this;
@@ -288,18 +287,20 @@ export class Register {
 
         let address = (this.base_address + this.addressOffset).toString(16);
 
-        tmp.append(`template<${this.address_type},`);
-        tmp.append(`        0x${address},`);
-        tmp.append(`        ${this.value_type}>`);
-        tmp.append(`class ${this.name} : public Register<${this.address_type},`);
-        tmp.append(`                                0x${address},`);
-        tmp.append(`                                ${this.value_type}>{`);
+        tmp.append(`using ${this.name} = Register<${this.address_type}, 0x${address}, ${this.value_type}>;`)
+
+        // tmp.append(`template<${this.address_type},`);
+        // tmp.append(`        0x${address},`);
+        // tmp.append(`        ${this.value_type}>`);
+        // tmp.append(`class ${this.name} : public Register<${this.address_type},`);
+        // tmp.append(`                                0x${address},`);
+        // tmp.append(`                                ${this.value_type}>{`);
 
         this.fields.forEach( field => {
             tmp.append(field.toCPP());
         });
 
-        tmp.append(`};`);
+        //tmp.append(`};`);
 
         return tmp.value;
     }

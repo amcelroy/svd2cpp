@@ -11,8 +11,24 @@ export class Peripheral {
 
     comments: string = '';
 
-    from(peripheral: Peripheral) {
-        //TODO: Deep copy a similar peripheral
+    copy(name: string, base_address: string, interrupt: any = {}) {
+        let clone = new Peripheral();
+        clone.name = name;
+        clone.baseAddress = base_address;
+        clone.group = this.group;
+        clone.interrupt = this.interrupt;
+        clone.comments = this.comments;
+        this.registers.forEach( reg => {
+            clone.registers.push(reg);
+        });
+
+        clone.description = this.description.replace(this.name, clone.name);
+
+        if(Object.keys(interrupt).length){
+            clone.interrupt = interrupt['value'];
+        }
+
+        return clone;
     }
 
     parse(json: any, address_type: string = 'uint32_t', value_type: string = 'uint32_t'): Peripheral {
