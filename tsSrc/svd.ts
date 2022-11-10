@@ -1,6 +1,7 @@
 import { dir } from "console";
 import { XMLParser, XMLBuilder, XMLValidator} from "fast-xml-parser";
 import * as fs from 'fs/promises';
+import path from "path";
 import { MCU } from './mcu'
 
 export class SVD {
@@ -35,7 +36,16 @@ export class SVD {
         this.mcu.parse(this.xml['device']);
     }
 
-    async toCPP() {
+    async copyCppFiles(files: string[], source_dir: string, dest_dir: string) {
+        for(const file of files){
+            await fs.copyFile(
+                path.join(source_dir, "..", "cppSrc", file), 
+                path.join(dest_dir, file)
+            );
+        }
+    }
+
+    async toCpp() {
         try {
             // Check if path is a folder
             await fs.access(this.directory);
@@ -43,6 +53,8 @@ export class SVD {
             await fs.mkdir(this.directory);
         }
 
-        await this.mcu.toCPP(this.directory);
+        await this.copyCppFiles(["register.h", "peripherals.h", "cmsis_armclang.h"], __dirname, this.directory);
+
+        await this.mcu.toCpp(this.directory);
     }
 }

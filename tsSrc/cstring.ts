@@ -10,9 +10,18 @@ export class cstring {
         return this.value;
     }
     
-    append(line: string): cstring {
-        this.value += line + '\n';
+    append(line: string | undefined, cr: boolean = true): cstring {
+        if(line){
+            this.value += line;
+            if(cr){
+                this.endl();
+            }
+        }
         return this;
+    }
+
+    endl() {
+        this.value += "\n";
     }
 
     static capitalizeFirstLetter(word: string){

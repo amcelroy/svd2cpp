@@ -1,6 +1,6 @@
 import { cstring } from './cstring';
 import { MCU } from './mcu';
-import { Register } from './register'
+import { Register, Tags } from './register'
 
 export class Peripheral {
     name: string = '';
@@ -9,6 +9,7 @@ export class Peripheral {
     baseAddress: string = '';
     interrupt: Map<string, number> = new Map<string, number>();
     registers: Array<Register> = [];
+    inherited: boolean = false;
 
     comments: string = '';
 
@@ -29,6 +30,8 @@ export class Peripheral {
         }else{
             console.log(`No interrupts found for ${name}`);
         }
+
+        clone.inherited = true;
 
         return clone;
     }
@@ -87,5 +90,38 @@ export class Peripheral {
         }
 
         return this;
+    }
+
+    toCpp(inheritences: string, address_width: string) {
+        let cl = new cstring();
+
+        if(this.interrupt.size > 0){
+
+        }
+
+        let registers = new cstring();
+        let structs = new cstring();
+        let enums = new cstring();
+
+        this.registers.forEach( r => {
+            let register_details = r.toCpp(this.baseAddress, address_width, this.inherited);
+            registers.append(register_details.get(Tags.Register)?.toString());
+            structs.append(register_details.get(Tags.Struct)?.toString());
+            enums.append(register_details.get(Tags.Enum)?.toString());
+        });
+
+        cl.append(enums.toString());
+        cl.append(structs.toString());
+
+        if(inheritences == ""){
+            cl.append(`class ${this.name} final : public Peripheral<${this.baseAddress}> {`)
+        }else{
+            cl.append(`class ${this.name} final : public Peripheral<${this.baseAddress}>, ${inheritences} {`)
+        }
+        
+        cl.append(registers.toString(), false);
+
+        cl.append(`};`);
+        return cl.toString();
     }
 }

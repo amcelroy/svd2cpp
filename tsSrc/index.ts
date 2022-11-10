@@ -11,7 +11,7 @@ import path from 'path';
     
     svd.generate();
 
-    svd.toCPP();
+    svd.toCpp();
 
 
 })();

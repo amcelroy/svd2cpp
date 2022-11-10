@@ -68,7 +68,7 @@ export class MCU {
                 let derived_peripheral = derived[0] as Peripheral;
                 let copied_peripheral = derived_peripheral.copy(
                     json_peripheral['name'], 
-                    json_peripheral['baseAddress'],
+                    '0x' + json_peripheral['baseAddress'].toString(16),
                     json_peripheral['interrupt']
                 );
 
@@ -100,58 +100,38 @@ export class MCU {
         let file = new cstring();
 
         file.append(`#pragma once`);
-        file.append(``);
+        file.endl();
         file.append(`#include "register.h"`);
-        file.append(``);
+        file.append(`#include "peripherals.h"`);
+        file.endl();
         file.append(`namespace ${this.namespace} {`);
-        file.append(``);
+        file.endl();
 
         let address_width = this.addressing.get(parseInt(this.json['width']));
 
-        if(peripherals.length == 1){
-            let p = peripherals[0];
-            file.append(`namespace ${p.group.toLowerCase()} {`);
-            file.append(``);
-
-            let register = new cstring();
-            let fields = new cstring();
-
-            p.registers.forEach( r => {
-                // TODO: register to CPP
-                r.toCpp(p.baseAddress, address_width);
-                console.clear();
-                console.log(file.toString());
-            });
+        if(address_width){
+            for(const peripheral of peripherals){
+                //TODO: Construct Peripheral interheritence classes
+                file.append(peripheral.toCpp("", address_width));
+            }
         }else{
-
+            throw new Error("Error detecting address_width in .peripheralsToCpp(...)");
         }
 
-        file.append(`}`);
         file.append(`}`);
 
         await fs.writeFile(filename, file.toString());
     }
 
-    async toCPP(directory: string) {
-        await fs.copyFile(
-            path.join(__dirname, "..", "cppSrc", "register.h"), 
-            path.join(directory, "register.h")
-        );
-
+    async toCpp(directory: string) {
         //Generate IRQ table
         let irq = new IRQ();
-        irq.toCPP(directory, this, this.namespace);
-        
-        //TODO: Add NVIC
-    
-        
+        await irq.toCPP(directory, this, this.namespace);
+         
         //Group Peripherals
         let grouped_peripherals = this.groupPeripherals(this.peripherals);
 
-        let key = grouped_peripherals.keys().next();
-        while(key){
-            let peripherals = grouped_peripherals.get(key.value);
-
+        for(const [key, peripherals] of grouped_peripherals.entries()){
             if(peripherals){
                 let groupname = peripherals[0].group;
 
@@ -159,14 +139,6 @@ export class MCU {
     
                 await this.peripheralsToCpp(filename, peripherals);
             }
-            key = grouped_peripherals.keys().next();
         }
-
-        // let sysctl = grouped_peripherals.get('SYSCTL');
-
-        // let fn = path.join(directory, "sysctl.h");
-
-        // if(sysctl)
-        //     await this.peripheralsToCpp(fn, sysctl);
     }
 }
