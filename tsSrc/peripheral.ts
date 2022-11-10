@@ -1,4 +1,5 @@
 import { cstring } from './cstring';
+import { MCU } from './mcu';
 import { Register } from './register'
 
 export class Peripheral {
@@ -6,7 +7,7 @@ export class Peripheral {
     description: string = '';
     group: string = '';
     baseAddress: string = '';
-    interrupt: number = -1;
+    interrupt: Map<string, number> = new Map<string, number>();
     registers: Array<Register> = [];
 
     comments: string = '';
@@ -16,7 +17,6 @@ export class Peripheral {
         clone.name = name;
         clone.baseAddress = base_address;
         clone.group = this.group;
-        clone.interrupt = this.interrupt;
         clone.comments = this.comments;
         this.registers.forEach( reg => {
             clone.registers.push(reg);
@@ -25,10 +25,37 @@ export class Peripheral {
         clone.description = this.description.replace(this.name, clone.name);
 
         if(Object.keys(interrupt).length){
-            clone.interrupt = interrupt['value'];
+            clone.parseInterrupts(interrupt);
+        }else{
+            console.log(`No interrupts found for ${name}`);
         }
 
         return clone;
+    }
+
+    addInterrupt(name: string, value: number){
+        this.interrupt.set(
+            name, 
+            value
+        );
+    }
+
+    parseInterrupts(json: any){
+        let ints = json as any[];
+
+        if(ints.length > 1){
+            ints.forEach( (json_int: any) => {
+                this.addInterrupt(
+                    json_int['name'], 
+                    json_int['value']
+                );
+            });
+        }else{
+            this.addInterrupt(
+                json['name'], 
+                json['value']
+            );
+        }
     }
 
     parse(json: any, address_type: string = 'uint32_t', value_type: string = 'uint32_t'): Peripheral {
@@ -45,11 +72,12 @@ export class Peripheral {
         }
 
         if(json['baseAddress']){
-            this.baseAddress = json['baseAddress'];
+            let address = json['baseAddress'] as number;
+            this.baseAddress = '0x' + address.toString(16);
         }
 
         if(json['interrupt']){
-            this.interrupt = json['interrupt']['value'];
+            this.parseInterrupts(json['interrupt']);
         }
 
         if(json['registers']){
@@ -59,27 +87,5 @@ export class Peripheral {
         }
 
         return this;
-    }
-
-    toCPP() {
-        let tmp = new cstring();
-
-        //TODO: Create new file here
-
-        tmp.append(`#include "register.h"`);
-        tmp.append(`namespace ${this.group.toLowerCase()} {`);
-
-        tmp.append(`namespace ${this.name.toLowerCase()} {`);
-
-        this.registers.forEach(register => {
-            tmp.append(register.toCPP());
-        });
-
-        tmp.append(`}`);
-        tmp.append(`}`);
-
-        console.log(tmp.value);
-
-        let x = 0;
     }
 }

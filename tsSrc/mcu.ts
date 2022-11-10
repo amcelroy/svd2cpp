@@ -1,10 +1,20 @@
+import { fstat } from 'fs';
+import path from 'path';
+import { Path } from 'typescript';
+import { cstring } from './cstring';
+import { IRQ } from './irqs';
 import { Peripheral } from './peripheral'
+import * as fs from 'fs/promises';
+const prompt = require('prompt-sync')();
 
 export class MCU {
+    json: any = {};
 
     fpu: boolean = false;
     mpu: boolean = false;
     name: string = '';
+    namespace: string = ``;
+    endian: string = '';
     
     peripherals: Peripheral[] = [];
     nvic: Map<string, number> = new Map<string, number>;
@@ -19,6 +29,16 @@ export class MCU {
     }
 
     parse(json: any) {
+        this.json = json;
+
+        if(json['series']){
+            this.namespace = json['series'].toLowerCase();
+        }else{
+            this.namespace = prompt(`Namespace couldn't be determined, 
+                please enter a namespace for the microcontroller. For example, 
+                a TM4C123GH6PM might have a namespace of tm4c`);
+        }
+
         if(json['cpu']){
             let cpu = json['cpu'];
             this.name = cpu['name'];
@@ -61,12 +81,92 @@ export class MCU {
         let debug_end_of_peripherals = true;
     }
 
-    toCPP() {
-        //TODO: Add NVIC
-        //TODO: System registers?
+    groupPeripherals(peripherals: Peripheral[]): Map<string, Peripheral[]> {
+        let ret = new Map<string, Peripheral[]>();
+
+        peripherals.forEach( peripheral => {
+            let peripheral_group = ret.get(peripheral.group);
+            if(!peripheral_group){
+                peripheral_group = [];
+            }
+            peripheral_group.push(peripheral);
+            ret.set(peripheral.group, peripheral_group);
+        }); 
+
+        return ret;
+    }
+
+    async peripheralsToCpp(filename: string, peripherals: Peripheral[]){
+        let file = new cstring();
+
+        file.append(`#pragma once`);
+        file.append(``);
+        file.append(`#include "register.h"`);
+        file.append(``);
+        file.append(`namespace ${this.namespace} {`);
+        file.append(``);
+
+        let address_width = this.addressing.get(parseInt(this.json['width']));
+
+        if(peripherals.length == 1){
+            let p = peripherals[0];
+            file.append(`namespace ${p.group.toLowerCase()} {`);
+            file.append(``);
+
+            let register = new cstring();
+            let fields = new cstring();
+
+            p.registers.forEach( r => {
+                // TODO: register to CPP
+                r.toCpp(p.baseAddress, address_width);
+                console.clear();
+                console.log(file.toString());
+            });
+        }else{
+
+        }
+
+        file.append(`}`);
+        file.append(`}`);
+
+        await fs.writeFile(filename, file.toString());
+    }
+
+    async toCPP(directory: string) {
+        await fs.copyFile(
+            path.join(__dirname, "..", "cppSrc", "register.h"), 
+            path.join(directory, "register.h")
+        );
+
+        //Generate IRQ table
+        let irq = new IRQ();
+        irq.toCPP(directory, this, this.namespace);
         
-        this.peripherals.forEach( p => {
-            p.toCPP();
-        });
+        //TODO: Add NVIC
+    
+        
+        //Group Peripherals
+        let grouped_peripherals = this.groupPeripherals(this.peripherals);
+
+        let key = grouped_peripherals.keys().next();
+        while(key){
+            let peripherals = grouped_peripherals.get(key.value);
+
+            if(peripherals){
+                let groupname = peripherals[0].group;
+
+                let filename = path.join(directory, groupname.toLowerCase() + ".h");
+    
+                await this.peripheralsToCpp(filename, peripherals);
+            }
+            key = grouped_peripherals.keys().next();
+        }
+
+        // let sysctl = grouped_peripherals.get('SYSCTL');
+
+        // let fn = path.join(directory, "sysctl.h");
+
+        // if(sysctl)
+        //     await this.peripheralsToCpp(fn, sysctl);
     }
 }

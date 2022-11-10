@@ -5,11 +5,11 @@
 #define __STATIC_INLINE static inline
 #endif
 
-template<typename Taddress, volatile Taddress *address, typename T>
+template<uintptr_t address, typename T>
 class Register {
 
 private:
-    T value = 0;
+   static constexpr reg_addr_t Address = address;
 
 public:
     Register() {
@@ -35,11 +35,11 @@ public:
     }
 
     inline Register Write() {
-        *address = value;
+        *reinterpret_cast<volatile T*>(Address) = value;
     }
 
     inline Register Read(){
-        return *base_address;
+        return *reinterpret_cast<volatile T*>(Address)
     }
 
     inline Register SetBit(T bit) {

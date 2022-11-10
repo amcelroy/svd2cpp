@@ -1,4 +1,11 @@
 import { cstring } from './cstring';
+import { Utils } from './utils';
+
+export enum Tags {
+    Enum, 
+    Register,
+    Value
+}
 
 enum Access {
     Read,
@@ -191,12 +198,13 @@ class Field {
         return tmp.value;
     }
 
-    toCPP(): string {
+    toCpp(): Map<Tags, string> {
         let tmp = new cstring();
 
+        let output = new Map<Tags, string>();
+
         if(this.enumerations.length > 1) {
-            //TODO: Fill in enumerations
-            this.enumerationToCPP();
+            output.set(Tags.Enum, this.enumerationToCPP());
         }
 
         switch(this.access){
@@ -212,8 +220,8 @@ class Field {
                 break;
         }
         
-        this.cpp = tmp.value;
-        return this.cpp;
+        output.set(Tags.Register, tmp.value)
+        return output;
     }
 }
 
@@ -222,7 +230,7 @@ export class Register {
     namespace: string = '';
     access: Access = Access.ReadWrite;
     description: string = '';
-    addressOffset: number = 0;
+    addressOffset: string = '0x0';
     name: string = '';
     fields: Field[] = [];
 
@@ -248,11 +256,6 @@ export class Register {
         return this;
     }
 
-    setAddressOffset(offset: string): Register {
-        this.addressOffset = parseInt(offset, 16);
-        return this;
-    }
-
     parse(json: any) : Register {
         if(json['name']) {
             this.name = json['name'];
@@ -263,7 +266,11 @@ export class Register {
         }
 
         if(json['addressOffset']) {
-            this.addressOffset = json['addressOffset'];
+            let offset = json['addressOffset'] as number;
+            if(offset == 0){
+                let test = 0;
+            }
+            this.addressOffset = '0x' + offset.toString(16);
         }
 
         if(json['fields']) {
@@ -282,26 +289,33 @@ export class Register {
         return this;
     }
 
-    toCPP() {
-        let tmp = new cstring();
+    registerValueName() {
+        return this.name.substring(0, 1) + this.name.substring(1).toLowerCase() + 'Value'
+    }
 
-        let address = (this.base_address + this.addressOffset).toString(16);
+    toCpp(baseAddress: string, address_width: string = "uint32_t") {
+        let output = new Map<Tags, string>();
 
-        tmp.append(`using ${this.name} = Register<${this.address_type}, 0x${address}, ${this.value_type}>;`)
+        // TODO: Compile all enumerations
+        
+        let register_value_name = "";
+        if(this.fields.length){
+            register_value_name = this.registerValueName();
 
-        // tmp.append(`template<${this.address_type},`);
-        // tmp.append(`        0x${address},`);
-        // tmp.append(`        ${this.value_type}>`);
-        // tmp.append(`class ${this.name} : public Register<${this.address_type},`);
-        // tmp.append(`                                0x${address},`);
-        // tmp.append(`                                ${this.value_type}>{`);
+        }
 
-        this.fields.forEach( field => {
-            tmp.append(field.toCPP());
-        });
+        let register_type = "";
+        if(register_value_name){
+            register_type = register_value_name;
+        }else{
+            register_type = address_width;
+        }
 
-        //tmp.append(`};`);
-
-        return tmp.value;
+        let register = new cstring();
+        register.append(`/// ${this.description}`)
+        register.append(`using ${this.name} = Register<${baseAddress} + ${this.addressOffset}, ${register_type}>;`);
+        register.append(``);
+        
+        register.toString()
     }
 }
