@@ -1,15 +1,33 @@
 #include <cstdint>
-//#include "cmsis_armclang.h"
+#include "cmsis_armclang.h"
 
-#ifndef __STATIC_INLINE
-#define __STATIC_INLINE static inline
-#endif
+template<typename T>
+class RegisterValue {
+    T value = 0;
+
+    public: 
+    __INLINE RegisterValue<T>& SetBit(T bit) {
+        this.value |= (1 << bit);
+        return *this;
+    }
+
+    __INLINE RegisterValue<T>& ClearBit(T bit) {
+        this.value &= ~(1 << bit);
+        return *this;
+    }
+
+    __INLINE bool GetBit(T bit){
+        return (this.value >> bit);
+    }
+};
 
 template<uintptr_t address, typename T>
 class Register {
 
 private:
-   static constexpr reg_addr_t Address = address;
+    static constexpr reg_addr_t Address = address;
+
+    RegisterValue<T> value;
 
 public:
     Register() {
@@ -25,34 +43,20 @@ public:
         this->value = r.value;
     }
 
-    inline T Value(){
+    __STATIC_INLINE RegisterValue<T> Value(){
         return value;
     }
 
-    inline Register Write(T value){
+    __STATIC_INLINE void Write(T value){
         this->value = value;
         this->Write();
     }
 
-    inline Register Write() {
+    __STATIC_INLINE void Write() {
         *reinterpret_cast<volatile T*>(Address) = value;
     }
 
-    inline Register Read(){
+    __STATIC_INLINE T Read(){
         return *reinterpret_cast<volatile T*>(Address)
-    }
-
-    inline Register SetBit(T bit) {
-        value |= (1 << bit);
-        return *this;
-    }
-
-    inline Register ClearBit(T bit) {
-        value &= ~(1 << bit);
-        return *this;
-    }
-
-    inline bool GetBit(T bit){
-        return (value >> bit);
     }
 };
