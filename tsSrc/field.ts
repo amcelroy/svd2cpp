@@ -83,7 +83,7 @@ export class Field {
 
         let return_value = 'T';
         if(this.enumerations.length){
-            return_value = `e_${this.enumerations[0].group}`;
+            return_value = `e${cstring.capitalizeFirstLetter(this.enumerations[0].group)}`;
         }
 
         tmp.append(`/// @brief ${this.description}`);
@@ -94,7 +94,7 @@ export class Field {
             tmp.append(`    return GetBit(${this.low_bit});`);
         }else{
             tmp.append(`__INLINE ${return_value} ${this.name}() {`);
-            tmp.append(`    return (this->value >> ${this.low_bit}) & ${ this.bitMask.toString(16) };`);
+            tmp.append(`    return (${return_value})((this->value >> ${this.low_bit}) & ${ this.bitMask.toString(16) });`);
         }
         tmp.append(`}`);
         return tmp.value;
@@ -105,7 +105,7 @@ export class Field {
         
         let return_value = '';
         if(this.enumerations.length){
-            return_value = `e_${this.enumerations[0].group}`;
+            return_value = `e${cstring.capitalizeFirstLetter(this.enumerations[0].group)}`;
         }
 
         tmp.append(`/// @brief ${this.description}`);
@@ -116,8 +116,8 @@ export class Field {
             tmp.append(`    value ? SetBit(${this.low_bit}) : ClearBit(${this.low_bit});`);
         }else{
             tmp.append(`__INLINE ${register_value_name}& ${this.name}(${return_value} value) {`);
-            tmp.append(`    this.value &= ~((value & 0x${ this.bitMask.toString(16) }) << ${this.low_bit});`);
-            tmp.append(`    this.value |= (value & 0x${ this.bitMask.toString(16) }) << ${this.low_bit};`);
+            tmp.append(`    this->value &= ~(((uint32_t)value & 0x${ this.bitMask.toString(16) }) << ${this.low_bit});`);
+            tmp.append(`    this->value |= ((uint32_t)value & 0x${ this.bitMask.toString(16) }) << ${this.low_bit};`);
         }
 
         tmp.append(`    return *this;`)
@@ -128,10 +128,10 @@ export class Field {
     enumerationToCPP(): string {
         let tmp = new cstring();
 
-        tmp.append(`enum class e${this.name} {`);
+        tmp.append(`enum class e${cstring.capitalizeFirstLetter(this.name)} {`);
 
         this.enumerations.forEach( e => {
-            tmp.append(`${e.name} = ${e.value}; /// ${e.description}`);
+            tmp.append(`${e.name} = ${e.value}, /// ${e.description}`);
         });
 
         tmp.append(`};`)

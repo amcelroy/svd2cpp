@@ -3,20 +3,21 @@
 
 template<typename T>
 class RegisterValue {
-    T value = 0;
+    protected:
+    static T value = 0;
 
     public: 
-    __INLINE RegisterValue<T>& SetBit(T bit) {
+    __STATIC_FORCEINLINE RegisterValue<T>& SetBit(T bit) {
         this.value |= (1 << bit);
         return *this;
     }
 
-    __INLINE RegisterValue<T>& ClearBit(T bit) {
+    __STATIC_FORCEINLINE RegisterValue<T>& ClearBit(T bit) {
         this.value &= ~(1 << bit);
         return *this;
     }
 
-    __INLINE bool GetBit(T bit){
+    __STATIC_FORCEINLINE bool GetBit(T bit){
         return (this.value >> bit);
     }
 };
@@ -24,10 +25,10 @@ class RegisterValue {
 template<uintptr_t address, typename T>
 class Register {
 
-private:
+protected:
     static constexpr reg_addr_t Address = address;
 
-    RegisterValue<T> value;
+    static RegisterValue<T> value;
 
 public:
     Register() {
@@ -43,20 +44,20 @@ public:
         this->value = r.value;
     }
 
-    __STATIC_INLINE RegisterValue<T> Value(){
+    __STATIC_FORCEINLINE RegisterValue<T> Value(){
         return value;
     }
 
-    __STATIC_INLINE void Write(T value){
+    __STATIC_FORCEINLINE void Write(T value){
         this->value = value;
         this->Write();
     }
 
-    __STATIC_INLINE void Write() {
+    __STATIC_FORCEINLINE void Write() {
         *reinterpret_cast<volatile T*>(Address) = value;
     }
 
-    __STATIC_INLINE T Read(){
+    __STATIC_FORCEINLINE T Read(){
         return *reinterpret_cast<volatile T*>(Address)
     }
 };

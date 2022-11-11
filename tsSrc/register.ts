@@ -91,6 +91,9 @@ export class Register {
                 register_struct.append(`class ${register_struct_name} : public RegisterValue<${address_width}> {`);
                 for(const field of this.fields){
                     register_struct.append(field.toCpp(register_struct_name, address_width));
+                    if(field.enumerations.length > 0){
+                        register_enum.append(field.enumerationToCPP());
+                    }
                 }
                 register_struct.append(`};`);
             }
