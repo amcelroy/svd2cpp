@@ -1,14 +1,14 @@
 #pragma once
 
-#include <cstdint>
-
 #define SVD_2_CPP_VERSION "0.0.1"
 
+#include <cstdint>
 #include "register.h"
 
-template<uint32_t base_address, uint8_t module_number>
+template<uint32_t base_address>
 class Peripheral {
-
+protected:
+    static uint32_t address = base_address;
 };
 
 class ActivePeripheral {
@@ -18,11 +18,20 @@ public:
     virtual void Reset() = 0;
 };
 
-template<uint32_t interrupt>
+template<uint8_t... interrupts>
 class InterruptPeripheral {
+    protected:
+        constexpr size_t number_of_interrupts = sizeof...(interrupts);
+        constexpr uint8_t interrupts[number_of_interrupts] = { interrupts... };
+
     public:
-        virtual void EnableInterrupt(uint8_t priority) = 0;
-        virtual void DisableInterrupt() = 0;
+        void EnableInterrupt(uint8_t interrupt, uint8_t priority) {
+            #warning Need to implement Enable Interrupts for this MCU in InterruptPeripheral
+        }
+
+        void DisableInterrupt() {
+            #warning Need to implement Disable Interrupts for this MCU in InterruptPeripheral
+        }
 };
 
 class GpioPeripheral {
@@ -127,9 +136,11 @@ class SystemPeripheral {
 };
 
 namespace tm4c {
-    class gpioa : public Peripheral<0x4000, 0>, ActivePeripheral, GpioPeripheral, InterruptPeripheral<5> {
+
+    template<uint32_t base_address>
+    class gpio : public Peripheral<base_address>, ActivePeripheral, GpioPeripheral, InterruptPeripheral<1, 2> {
         public:
-            using LOAD = Register<0x4000 + 0, uint32_t>;
+            using LOAD = Register<base_address + 0, uint32_t>;
 
             void Enable(bool clocks, bool sleep, bool deep_sleep){
                 
@@ -154,7 +165,7 @@ namespace tm4c {
 }
 
 // Example use
-tm4c::gpioa A;
+tm4c::gpio<0x4000> A;
 
 int main() {
     A.Reset();

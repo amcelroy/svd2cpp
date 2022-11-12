@@ -113,10 +113,11 @@ export class Peripheral {
         cl.append(enums.toString());
         cl.append(structs.toString());
 
+        cl.append(`template<uint32_t base_address>`)
         if(inheritences == ""){
-            cl.append(`class ${this.name} final : public Peripheral<${this.baseAddress}> {`)
+            cl.append(`class ${this.group} final : public Peripheral<base_address> {`)
         }else{
-            cl.append(`class ${this.name} final : public Peripheral<${this.baseAddress}>, ${inheritences} {`)
+            cl.append(`class ${this.group} final : public Peripheral<base_address>, ${inheritences} {`)
         }
         
         cl.append(registers.toString(), false);

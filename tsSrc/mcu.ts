@@ -96,6 +96,10 @@ export class MCU {
         return ret;
     }
 
+    async generateHeader() {
+        
+    }
+
     async peripheralsToCpp(filename: string, peripherals: Peripheral[]){
         let file = new cstring();
 
@@ -110,10 +114,7 @@ export class MCU {
         let address_width = this.addressing.get(parseInt(this.json['width']));
 
         if(address_width){
-            for(const peripheral of peripherals){
-                //TODO: Construct Peripheral interheritence classes
-                file.append(peripheral.toCpp("", address_width));
-            }
+            file.append(peripherals[0].toCpp("", address_width));
         }else{
             throw new Error("Error detecting address_width in .peripheralsToCpp(...)");
         }
@@ -127,6 +128,8 @@ export class MCU {
         //Generate IRQ table
         let irq = new IRQ();
         await irq.toCPP(directory, this, this.namespace);
+
+        let mcu_header_file = new cstring();
          
         //Group Peripherals
         let grouped_peripherals = this.groupPeripherals(this.peripherals);

@@ -372,3 +372,6 @@ build/output/irqs.h
 build/output/peripherals.h
 build/output/register.h
 build/output/watchdog.h
+build/output/gpio.h
+build/output/ssi.h
+build/output/uart.h
