@@ -83,12 +83,19 @@ export class Register {
         
         let register_struct_name = address_width; // Use address width if there is nothing specific about the register
 
+        // Check the fields array. If there are no fields, just use address_width (like uint32_t).
+        // Otherwise, we need to fill a custom RegisterValue.
         if(this.fields.length){
             register_struct_name = Utils.makeRegisterStructName(this.name);
             // Check if the register is inherited from another peripheral. If it is,
             // don't regenerate the struct value.
             if(inherited == false){
-                register_struct.append(`class ${register_struct_name} : public RegisterValue<${address_width}> {`);
+                register_struct.append(`class ${register_struct_name} final : public RegisterValue<${address_width}> {`);
+                register_struct.append("public:")
+                register_struct.endl();
+                register_struct.append(`${register_struct_name}() { this->value = ${0}; }`);
+                register_struct.endl();
+
                 for(const field of this.fields){
                     register_struct.append(field.toCpp(register_struct_name, address_width));
                     if(field.enumerations.length > 0){

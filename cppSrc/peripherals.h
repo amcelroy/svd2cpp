@@ -3,7 +3,46 @@
 #define SVD_2_CPP_VERSION "0.0.1"
 
 #include <cstdint>
+#include <set>
 #include "register.h"
+#include "irqs.h"
+
+template<typename gpio_peripheral, uint32_t pin>
+class OutputPin {
+    public:
+        void Init() {
+            #warning Configure OutputPin.Init()
+        }
+
+        void Set() {
+            #warning Configure OutputPin.Set()
+        }
+
+        void Clear() {
+            #warning Configure OutputPin.Clear()
+        }
+};
+
+template<typename gpio_peripheral, uint32_t pin>
+class InputPin {
+    public:
+        void Init() {
+            #warning Configure InputPin.Init()
+        }
+
+        bool Get() {
+            #warning Configure InputPin.Get()
+            return false;
+        }
+};
+
+template<typename gpio_peripheral, uint32_t pin>
+class PeripheralPin {
+    public:
+        void Init() {
+            #warning Configure InputPin.Init()
+        }
+};
 
 template<uint32_t base_address>
 class Peripheral {
@@ -13,68 +52,69 @@ protected:
 
 class ActivePeripheral {
 public:
-    virtual void Enable(bool clocks, bool sleep, bool deep_sleep) = 0;
+    virtual void Enable(bool clocks, bool sleep = true, bool deep_sleep = true) = 0;
     virtual void Disable() = 0;
     virtual void Reset() = 0;
+
+    /// @brief Useful to call when checking inputs that aren't quite right. For
+    /// example, the TM4C has 16-bit half timers, but the inherited Timer function
+    /// is 64-bit for broader utility across the HAL. If logic checks are not passed
+    /// this function can be called to so the stack trace is preserved.
+    /// Further, when debugging, changing debug_unwind to false can help step out
+    /// of the function for more diagnostics.
+    void InvalidConfiguration() { 
+        volatile bool debug_unwind = true;
+        while(debug_unwind) {
+
+        } 
+    };
 };
 
-template<uint8_t... interrupts>
+template<Irqs... interrupts>
 class InterruptPeripheral {
     protected:
-        constexpr size_t number_of_interrupts = sizeof...(interrupts);
-        constexpr uint8_t interrupts[number_of_interrupts] = { interrupts... };
+        // Not a constexpr, but close (source):
+        // https://stackoverflow.com/questions/58507333/can-i-make-a-constexpr-object-of-stdset
+        inline const std::set<Irqs> interrupts = { interrupts... };
 
     public:
-        void EnableInterrupt(uint8_t interrupt, uint8_t priority) {
-            #warning Need to implement Enable Interrupts for this MCU in InterruptPeripheral
-        }
+        /// @brief Enables the interrupt for this peripheral
+        /// @param interrupt to enable
+        virtual void InterruptEnable(Irqs interrupt = interrupts.begin()) = 0;
 
-        void DisableInterrupt() {
-            #warning Need to implement Disable Interrupts for this MCU in InterruptPeripheral
+        /// @brief Disables
+        virtual void InterruptDisable(Irqs interrupt = interrupts.begin()) = 0;
+
+        virtual void InterruptClear(Irqs interrupt = interrupts.begin()) = 0;
+
+        void InterruptPriority(uint8_t priority, Irq interrupt = interrupts.begin()) {
+            #warning Need to configure InterruptPriority() for this MCU.
         }
 };
 
 class GpioPeripheral {
     public: 
-        // class IoPin {
+};
 
-        // };
-
-        // class AnalogPin {
-
-        // };
-
-        // class OutputPin {
-
-        // };
-
-        // class InputPin {
-
-        // };
-
-        // class PeripheralPin {
-
-        // };
-
-        // virtual IoPin CreateIoPin(uint32_t pin) = 0;
-        // virtual AnalogPin CreateAnalogPin(uint32_t pin) = 0;
-        // virtual OutputPin CreateOutputPin(uint32_t pin) = 0;
-        // virtual InputPin CreateInputPin(uint32_t pin) = 0;
-        // virtual PeripheralPin CreatePeripheralPin(uint32_t pin) = 0;
+class PwmPeripheral {
+    public:
+        virtual void PwmConfigure(uint32_t frequency, uint32_t duty_cycle) = 0;
+        virtual void PwmStart() = 0;
+        virtual void PwmStop() = 0;
 };
 
 class FlashPeriperal {
     public:
-        virtual void FlashRead(void *address, void *data, uint32_t length);
-        virtual void FlashWrite(void *address, void *data, uint32_t length);
-        virtual void FlashErase(void *address, uint32_t length);
+        virtual void FlashRead(void *address, void *data, uint32_t length) = 0;
+        virtual void FlashWrite(void *address, void *data, uint32_t length) = 0;
+        virtual void FlashErase(void *address, uint32_t length) = 0;
 };
 
 class EepromPeripheral {
     public:
-        virtual void EepromRead(void *address, void *data, uint32_t length);
-        virtual void EepromWrite(void *address, void *data, uint32_t length);
-        virtual void EepromErase(void *address, uint32_t length);
+        virtual void EepromRead(void *address, void *data, uint32_t length) = 0;
+        virtual void EepromWrite(void *address, void *data, uint32_t length) = 0;
+        virtual void EepromErase(void *address, uint32_t length) = 0;
 };
 
 class TimerPeripheral {
@@ -103,15 +143,22 @@ class UartPeripheral {
 
 class SsiPeripheral {
     public:
+        virtual void SsiWrite(void *buffer, uint32_t length) = 0;
+        virtual void SsiRead(void *buffer, uint32_t length) = 0;
+        virtual void SsiSetClkSpeed(uint32_t clk_speed_hz) = 0;
 };
 
 class I2cPeripheral {
     public:
-        virtual void ReadWrite(void *buffer, uint32_t length) = 0;
+        virtual void I2cReadWrite(void *buffer, uint32_t length) = 0;
+        virtual void I2cSetClkSpeed(uint32_t clk_speed_hz) = 0;
 };
 
 class SpiPeripheral {
     public:
+        virtual void SpiWrite(void *buffer, uint32_t length) = 0;
+        virtual void SpiRead(void *buffer, uint32_t length) = 0;
+        virtual void SpiSetClkSpeed(uint32_t clk_speed_hz) = 0;
 };
 
 class AdcPeripheral {
@@ -135,38 +182,16 @@ class SystemPeripheral {
 
 };
 
-namespace tm4c {
+class ComparatorPeripheral {
+    public:
+};
 
-    template<uint32_t base_address>
-    class gpio : public Peripheral<base_address>, ActivePeripheral, GpioPeripheral, InterruptPeripheral<1, 2> {
-        public:
-            using LOAD = Register<base_address + 0, uint32_t>;
+class QeiPeripheral {
+    public:
 
-            void Enable(bool clocks, bool sleep, bool deep_sleep){
-                
-            }
+};
 
-            void EnableInterrupt(uint8_t priority){
-
-            }
-
-            void Disable(){
-
-            }
-
-            void Reset() {
-                
-            }
-
-            void DisableInterrupt() {
-
-            }
-    };
-}
-
-// Example use
-tm4c::gpio<0x4000> A;
-
-int main() {
-    A.Reset();
-}
+class HibernationPeripheral {
+    public:
+        virtual void Hibernate() = 0;
+};

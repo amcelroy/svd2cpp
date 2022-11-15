@@ -92,7 +92,12 @@ export class Peripheral {
         return this;
     }
 
-    toCpp(inheritences: string, address_width: string) {
+    appendInheritence(current_inheritence: string, i: string) {
+        current_inheritence += `, ${i}`;
+        return current_inheritence;
+    }
+
+    toCpp(address_width: string) {
         let cl = new cstring();
 
         if(this.interrupt.size > 0){
@@ -104,20 +109,40 @@ export class Peripheral {
         let enums = new cstring();
 
         this.registers.forEach( r => {
-            let register_details = r.toCpp(this.baseAddress, address_width, this.inherited);
+            let register_details = r.toCpp(`base_address`, address_width, this.inherited);
             registers.append(register_details.get(Tags.Register)?.toString());
             structs.append(register_details.get(Tags.Struct)?.toString());
             enums.append(register_details.get(Tags.Enum)?.toString());
         });
 
+        cl.endl();
+        cl.append(`namespace ${this.group.toLocaleLowerCase()} {`)
+        cl.endl();
         cl.append(enums.toString());
         cl.append(structs.toString());
+        cl.endl();
+        cl.append(`}`);
+        cl.endl();
+        cl.append(`using namespace ${this.group.toLocaleLowerCase()};`);
+        cl.endl();
 
-        cl.append(`template<uint32_t base_address>`)
-        if(inheritences == ""){
-            cl.append(`class ${this.group} final : public Peripheral<base_address> {`)
+        let inherited_classes = "";
+
+        // Handle interrupts, alter the template call if needed
+        if(this.interrupt.size){
+            inherited_classes = this.appendInheritence(inherited_classes, "InterruptPeripheral<interrupts>");
+            cl.append(`template<uint32_t base_address, Irqs... interrupts>`)
         }else{
-            cl.append(`class ${this.group} final : public Peripheral<base_address>, ${inheritences} {`)
+            cl.append(`template<uint32_t base_address>`)
+        }
+        
+        let group_first_lettter_cap = cstring.capitalizeFirstLetter(this.group);
+        inherited_classes = this.appendInheritence(inherited_classes, `${group_first_lettter_cap}Peripheral`);
+
+        if(inherited_classes == ""){
+            cl.append(`class ${group_first_lettter_cap} final : public Peripheral<base_address> {`)
+        }else{
+            cl.append(`class ${group_first_lettter_cap} final : public Peripheral<base_address> ${inherited_classes} {`)
         }
         
         cl.append(registers.toString(), false);

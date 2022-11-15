@@ -39,9 +39,10 @@ export class MCU {
                 a TM4C123GH6PM might have a namespace of tm4c`);
         }
 
+        this.name = json['name'];
+
         if(json['cpu']){
             let cpu = json['cpu'];
-            this.name = cpu['name'];
             this.fpu = cpu['fpuPresent'];
             this.mpu = cpu['mpuPresent'];
         }
@@ -96,11 +97,38 @@ export class MCU {
         return ret;
     }
 
-    async generateHeader() {
-        
+    async generateHeader(directory: string, header_files: string[]) {
+        let header_file = path.join(directory, `${this.name.toLocaleLowerCase()}.h`);
+
+        let header_cstring = new cstring();
+
+        header_cstring.append(`#pragma once`);
+        header_cstring.endl();
+        header_cstring.append(`#include "peripherals.h"`);
+        header_cstring.append(`#include "irqs.h"`);
+        for(let header of header_files){
+            header_cstring.append(`#include "${header}"`);
+        }
+        header_cstring.endl();
+        header_cstring.append(`namespace ${this.namespace} {`);
+        header_cstring.endl();
+
+        for(let peripheral of this.peripherals){
+            let interrupt_string = "";
+            peripheral.interrupt.forEach( (value: number, key: string) => {
+                interrupt_string += `, Irqs::${key}`;
+            });
+
+            header_cstring.append(`using ${peripheral.name.toLocaleLowerCase()} = ${cstring.capitalizeFirstLetter(peripheral.group)}<${peripheral.baseAddress} ${interrupt_string}>;`)
+        }
+
+        header_cstring.endl();
+        header_cstring.append('}');
+
+        await fs.writeFile(header_file, header_cstring.toString());
     }
 
-    async peripheralsToCpp(filename: string, peripherals: Peripheral[]){
+    async peripheralsToCpp(filename: string, peripheral: Peripheral){
         let file = new cstring();
 
         file.append(`#pragma once`);
@@ -109,12 +137,11 @@ export class MCU {
         file.append(`#include "peripherals.h"`);
         file.endl();
         file.append(`namespace ${this.namespace} {`);
-        file.endl();
 
         let address_width = this.addressing.get(parseInt(this.json['width']));
 
         if(address_width){
-            file.append(peripherals[0].toCpp("", address_width));
+            file.append(peripheral.toCpp(address_width));
         }else{
             throw new Error("Error detecting address_width in .peripheralsToCpp(...)");
         }
@@ -129,19 +156,28 @@ export class MCU {
         let irq = new IRQ();
         await irq.toCPP(directory, this, this.namespace);
 
-        let mcu_header_file = new cstring();
-         
         //Group Peripherals
         let grouped_peripherals = this.groupPeripherals(this.peripherals);
 
+        let generated_headers: string[] = [];
+
+        // Create Peripheral classes
         for(const [key, peripherals] of grouped_peripherals.entries()){
             if(peripherals){
-                let groupname = peripherals[0].group;
+                let peripheral_to_model = peripherals[0];
 
-                let filename = path.join(directory, groupname.toLowerCase() + ".h");
-    
-                await this.peripheralsToCpp(filename, peripherals);
+                let filename = peripheral_to_model.group.toLocaleLowerCase() + ".h";
+
+                generated_headers.push(filename);
+
+                let file_path = path.join(directory, filename);
+
+                await this.peripheralsToCpp(file_path, peripheral_to_model);
             }
         }
+
+        // TODO: Create Header file that enumerates all peripherals to 
+        // peripheral classes
+        await this.generateHeader(directory, generated_headers);
     }
 }

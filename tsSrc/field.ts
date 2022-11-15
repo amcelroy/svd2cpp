@@ -15,6 +15,7 @@ export class Field {
     access: Access = Access.ReadWrite;
     low_bit: number = 0;
     high_bit: number = 0;
+    type: string = '';
     enumerations: Enumeration[] = [];
     isBool: boolean = false;
     cpp: string = '';
@@ -54,6 +55,37 @@ export class Field {
         return this;
     }
 
+    getType(): string {
+        let total_bits = 1 + (this.high_bit - this.low_bit);
+
+        switch(total_bits) {
+            case 0:
+                throw "Error getting the type of this field: 0 bits";
+            case 1:
+                return 'bool';
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+                return 'uint8_t';
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+            case 13:
+            case 14:
+            case 15:
+            case 16:
+                return 'uint16_t';
+        }
+
+        return 'uint32_t';
+
+    }
+
     setName(name: string): Field {
         let name_splits = name.split('_');
         this.name = name_splits[name_splits.length - 1];
@@ -71,6 +103,9 @@ export class Field {
         let bits = trimmed.split(':');
         this.high_bit = Number(bits[0]);
         this.low_bit = Number(bits[1]);
+
+        this.type = this.getType();
+
         this.bitMask = this.high_bit - this.low_bit + 1; //Zero indexed bits
         this.bitMask = 2**this.bitMask - 1;
         if(this.bitMask == 1){
@@ -81,7 +116,7 @@ export class Field {
     getter(): string {
         let tmp = new cstring();
 
-        let return_value = 'T';
+        let return_value = this.type;
         if(this.enumerations.length){
             return_value = `e${cstring.capitalizeFirstLetter(this.enumerations[0].group)}`;
         }
@@ -94,7 +129,7 @@ export class Field {
             tmp.append(`    return GetBit(${this.low_bit});`);
         }else{
             tmp.append(`__INLINE ${return_value} ${this.name}() {`);
-            tmp.append(`    return (${return_value})((this->value >> ${this.low_bit}) & ${ this.bitMask.toString(16) });`);
+            tmp.append(`    return (${return_value})((this->value >> ${this.low_bit}) & 0x${ this.bitMask.toString(16) });`);
         }
         tmp.append(`}`);
         return tmp.value;
@@ -103,7 +138,7 @@ export class Field {
     setter(register_value_name: string): string {
         let tmp = new cstring();
         
-        let return_value = '';
+        let return_value = this.type;
         if(this.enumerations.length){
             return_value = `e${cstring.capitalizeFirstLetter(this.enumerations[0].group)}`;
         }
