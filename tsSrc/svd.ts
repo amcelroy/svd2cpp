@@ -45,16 +45,44 @@ export class SVD {
         }
     }
 
+    async copyCMakeFiles(files: string[], source_dir: string, dest_dir: string) {
+        throw new Error('TODO: Copy CMake files');
+        //         for(const file of files){
+        //     await fs.copyFile(
+        //         path.join(source_dir, "..", "cppSrc", file), 
+        //         path.join(dest_dir, file)
+        //     );
+        // }
+    }
+
     async toCpp() {
+        let mcu_name = this.mcu.name;
+
         try {
             // Check if path is a folder
             await fs.access(this.directory);
         }catch{
             await fs.mkdir(this.directory);
+
         }
 
-        await this.copyCppFiles(["register.h", "peripherals.h", "cmsis_armclang.h"], __dirname, this.directory);
+        let mcu_path = path.join(this.directory, this.mcu.name);
+        try {
+            await fs.access(mcu_path);
+        }catch{
+            await fs.mkdir(mcu_path);
+        }
 
-        await this.mcu.toCpp(this.directory);
+        let static_files = [
+            "register.h", 
+            "peripherals.h", 
+            "cmsis_armclang.h", 
+            "gpio_pins.h"
+        ];
+        await this.copyCppFiles(static_files, __dirname, mcu_path);
+
+        await this.mcu.toCpp(mcu_path);
+
+        //await this.copyCMakeFiles(files, source_dir, dest_dir)
     }
 }

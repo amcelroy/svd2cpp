@@ -39,7 +39,7 @@ export class MCU {
                 a TM4C123GH6PM might have a namespace of tm4c`);
         }
 
-        this.name = json['name'];
+        this.name = json['name'].toLocaleLowerCase();
 
         if(json['cpu']){
             let cpu = json['cpu'];
@@ -97,7 +97,19 @@ export class MCU {
         return ret;
     }
 
-    async generateHeader(directory: string, header_files: string[]) {
+    async generateIOHeader(directory: string) {
+        let header_file = path.join(directory, "io.h");
+        let header = new cstring();
+
+        header.append(`#include "${this.name}.h"`);
+        header.endl();
+        header.append(`// TODO: Add GPIO mapping here`);
+        header.append(`// ex. `)
+
+        await fs.writeFile(header_file, header.toString());
+    }
+
+    async generateMCUHeader(directory: string, header_files: string[]) {
         let header_file = path.join(directory, `${this.name.toLocaleLowerCase()}.h`);
 
         let header_cstring = new cstring();
@@ -119,7 +131,7 @@ export class MCU {
                 interrupt_string += `, Irqs::${key}`;
             });
 
-            header_cstring.append(`using ${peripheral.name.toLocaleLowerCase()} = ${cstring.capitalizeFirstLetter(peripheral.group)}<${peripheral.baseAddress} ${interrupt_string}>;`)
+            header_cstring.append(`${cstring.capitalizeFirstLetter(peripheral.group)}<${peripheral.baseAddress} ${interrupt_string}> ${peripheral.name.toLocaleLowerCase()};`)
         }
 
         header_cstring.endl();
@@ -178,6 +190,8 @@ export class MCU {
 
         // TODO: Create Header file that enumerates all peripherals to 
         // peripheral classes
-        await this.generateHeader(directory, generated_headers);
+        await this.generateMCUHeader(directory, generated_headers);
+
+        await this.generateIOHeader(directory);
     }
 }

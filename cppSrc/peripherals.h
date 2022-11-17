@@ -6,52 +6,13 @@
 #include <set>
 #include "register.h"
 #include "irqs.h"
-
-template<typename gpio_peripheral, uint32_t pin>
-class OutputPin {
-    public:
-        void Init() {
-            #warning Configure OutputPin.Init()
-        }
-
-        void Set() {
-            #warning Configure OutputPin.Set()
-        }
-
-        void Clear() {
-            #warning Configure OutputPin.Clear()
-        }
-};
-
-template<typename gpio_peripheral, uint32_t pin>
-class InputPin {
-    public:
-        void Init() {
-            #warning Configure InputPin.Init()
-        }
-
-        bool Get() {
-            #warning Configure InputPin.Get()
-            return false;
-        }
-};
-
-template<typename gpio_peripheral, uint32_t pin>
-class PeripheralPin {
-    public:
-        void Init() {
-            #warning Configure InputPin.Init()
-        }
-};
+#include "gpio_pins.h"
 
 template<uint32_t base_address>
 class Peripheral {
 protected:
     static uint32_t address = base_address;
-};
 
-class ActivePeripheral {
-public:
     virtual void Enable(bool clocks, bool sleep = true, bool deep_sleep = true) = 0;
     virtual void Disable() = 0;
     virtual void Reset() = 0;
@@ -88,12 +49,17 @@ class InterruptPeripheral {
         virtual void InterruptClear(Irqs interrupt = interrupts.begin()) = 0;
 
         void InterruptPriority(uint8_t priority, Irq interrupt = interrupts.begin()) {
-            #warning Need to configure InterruptPriority() for this MCU.
+            #warning Need to configure InterruptPriority() for this MCU. This is probably
+            #warning a common function that can be put in the InterruptPeripheral class
         }
 };
 
 class GpioPeripheral {
-    public: 
+    public:
+        virtual void GpioInit() = 0;
+        virtual OutputPin GpioOutputPin(uint32_t pin) = 0;
+        virtual InputPin GpioInputPin(uint32_t pin) = 0;
+        virtual PeripheralPin GpioPeripheralPin(uint32_t args...) = 0;
 };
 
 class PwmPeripheral {

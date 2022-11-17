@@ -146,6 +146,9 @@ export class Peripheral {
         }
         
         cl.append(registers.toString(), false);
+        cl.append(`public:`);
+        cl.append(`// TODO: Add class overrides here`);
+        cl.endl();
 
         cl.append(`};`);
         return cl.toString();

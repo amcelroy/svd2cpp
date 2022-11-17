@@ -51,7 +51,7 @@ export class IRQ {
 
         file_contents.append("}");
 
-        console.log(file_contents);
+        file_contents.append(`using namespace ${namespace};`);
 
         await Utils.checkAndDelete(file_path);
 
