@@ -3,7 +3,7 @@
 #define SVD_2_CPP_VERSION "0.0.1"
 
 #include <cstdint>
-#include <set>
+#include <cstdarg>
 #include "register.h"
 #include "irqs.h"
 #include "gpio_pins.h"
@@ -11,7 +11,7 @@
 template<uint32_t base_address>
 class Peripheral {
 protected:
-    static uint32_t address = base_address;
+    //static uint32_t address = base_address;
 
     virtual void Enable(bool clocks, bool sleep = true, bool deep_sleep = true) = 0;
     virtual void Disable() = 0;
@@ -34,21 +34,20 @@ protected:
 template<Irqs... interrupts>
 class InterruptPeripheral {
     protected:
-        // Not a constexpr, but close (source):
-        // https://stackoverflow.com/questions/58507333/can-i-make-a-constexpr-object-of-stdset
-        inline const std::set<Irqs> interrupts = { interrupts... };
+        // Not a constexpr
+        static constexpr Irqs interrupts_[sizeof...(interrupts)] = { interrupts... };
 
     public:
         /// @brief Enables the interrupt for this peripheral
         /// @param interrupt to enable
-        virtual void InterruptEnable(Irqs interrupt = interrupts.begin()) = 0;
+        virtual void InterruptEnable(Irqs interrupt = InterruptPeripheral::interrupts_[0]) = 0;
 
         /// @brief Disables
-        virtual void InterruptDisable(Irqs interrupt = interrupts.begin()) = 0;
+        virtual void InterruptDisable(Irqs interrupt = InterruptPeripheral::interrupts_[0]) = 0;
 
-        virtual void InterruptClear(Irqs interrupt = interrupts.begin()) = 0;
+        virtual void InterruptClear(Irqs interrupt = InterruptPeripheral::interrupts_[0]) = 0;
 
-        void InterruptPriority(uint8_t priority, Irq interrupt = interrupts.begin()) {
+        void InterruptPriority(uint8_t priority, Irqs interrupt) {
             #warning Need to configure InterruptPriority() for this MCU. This is probably
             #warning a common function that can be put in the InterruptPeripheral class
         }
@@ -57,9 +56,7 @@ class InterruptPeripheral {
 class GpioPeripheral {
     public:
         virtual void GpioInit() = 0;
-        virtual OutputPin GpioOutputPin(uint32_t pin) = 0;
-        virtual InputPin GpioInputPin(uint32_t pin) = 0;
-        virtual PeripheralPin GpioPeripheralPin(uint32_t args...) = 0;
+
 };
 
 class PwmPeripheral {

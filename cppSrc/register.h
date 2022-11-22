@@ -1,63 +1,78 @@
+#pragma once
+
 #include <cstdint>
 #include "cmsis_armclang.h"
 
 template<typename T>
-class RegisterValue {
-    protected:
-    static T value = 0;
+struct RegisterValue {
 
-    public: 
-    __STATIC_FORCEINLINE RegisterValue<T>& SetBit(T bit) {
-        this.value |= (1 << bit);
+    static inline T value_;
+
+    RegisterValue() {
+        value_ = 0;
+    }
+
+    RegisterValue(T initial) {
+        this->value = initial;
+    }
+
+    __INLINE void Set(T value) {
+        value_ = value;
+    }
+
+    __INLINE T Get() {
+        return value_;
+    }
+
+    __INLINE RegisterValue<T>& SetBit(T bit) {
+        this->value |= (1 << bit);
         return *this;
     }
 
-    __STATIC_FORCEINLINE RegisterValue<T>& ClearBit(T bit) {
-        this.value &= ~(1 << bit);
+    __INLINE RegisterValue<T>& ClearBit(T bit) {
+        this->value &= ~(1 << bit);
         return *this;
     }
 
-    __STATIC_FORCEINLINE bool GetBit(T bit){
-        return (this.value >> bit);
+    __INLINE bool GetBit(T bit){
+        return (this->value >> bit);
     }
 };
 
 template<uintptr_t address, typename T>
 class Register {
 
-protected:
-    static constexpr reg_addr_t Address = address;
-
-    static RegisterValue<T> value;
-
 public:
+    static constexpr uintptr_t Address = address;
+
+    static inline RegisterValue<T> value_;
+
     Register() {
-        value = 0;
-        this->Write(value);
+        value_ = RegisterValue<T>(0);
     }
 
     Register(T value) {
-        this->Write(value);
+        value_ = value;
     }
 
     Register(Register &r){
-        this->value = r.value;
+        value_ = r.value_;
     }
 
-    __STATIC_FORCEINLINE RegisterValue<T> Value(){
-        return value;
+    __STATIC_INLINE RegisterValue<T>& Value(){
+        return *value_;
     }
 
-    __STATIC_FORCEINLINE void Write(T value){
-        this->value = value;
-        this->Write();
+    __STATIC_INLINE void Write(T value){
+        value_.Set(value);
+        Write();
     }
 
-    __STATIC_FORCEINLINE void Write() {
-        *reinterpret_cast<volatile T*>(Address) = value;
+    __STATIC_INLINE void Write() {
+        *reinterpret_cast<volatile T*>(Address) = value_.Get();
     }
 
-    __STATIC_FORCEINLINE T Read(){
-        return *reinterpret_cast<volatile T*>(Address)
+    __STATIC_INLINE T Read(){
+        return *reinterpret_cast<volatile T*>(Address);
     }
 };

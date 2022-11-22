@@ -28,6 +28,11 @@ export class Field {
             if(splits.length > 1){
                 this.name = this.name.split('_')[splits.length - 1];
                 this.name = this.name.toLowerCase();
+
+                // Check if the field has a numeric leading char
+                if(this.name.search(/^[0-9].*$/)){ 
+                    this.name = "_" + this.name;
+                }
             }
         }
 

@@ -130,7 +130,7 @@ export class Peripheral {
 
         // Handle interrupts, alter the template call if needed
         if(this.interrupt.size){
-            inherited_classes = this.appendInheritence(inherited_classes, "InterruptPeripheral<interrupts>");
+            inherited_classes = this.appendInheritence(inherited_classes, "InterruptPeripheral<interrupts...>");
             cl.append(`template<uint32_t base_address, Irqs... interrupts>`)
         }else{
             cl.append(`template<uint32_t base_address>`)

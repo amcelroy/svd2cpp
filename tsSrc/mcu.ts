@@ -116,7 +116,6 @@ export class MCU {
 
         header_cstring.append(`#pragma once`);
         header_cstring.endl();
-        header_cstring.append(`#include "peripherals.h"`);
         header_cstring.append(`#include "irqs.h"`);
         for(let header of header_files){
             header_cstring.append(`#include "${header}"`);
